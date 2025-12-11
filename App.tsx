@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Timer } from './components/Timer';
 import { generateCognitiveFeedback } from './services/geminiService';
+import { handleGoogleAuth, initGoogleDrive, syncWithDrive } from './services/googleDriveService';
 import { AppStep, JournalData, MemoryItem, SessionMode } from './types';
 import { 
   Brain, ChevronRight, Save, CheckCircle2, AlertCircle, Eye, EyeOff, 
   MapPin, Sun, Sunset, Coffee, BookOpen, ArrowLeft, Calendar as CalendarIcon, 
   Download, Upload, Award, CloudRain, Sparkles, Moon, Pause, Play, X, Lightbulb,
-  ChevronLeft
+  ChevronLeft, Cloud, CloudOff, Wifi, WifiOff, RefreshCw
 } from 'lucide-react';
 
 // Pool of objects for memory exercise
@@ -257,6 +258,9 @@ const CalendarWidget: React.FC<CalendarProps> = ({ history, onSelectDate, select
     const hasMorning = sessions.some(s => s.sessionType === 'MORNING');
     const hasEvening = sessions.some(s => s.sessionType === 'EVENING');
     
+    // Check local sync status
+    const allSynced = sessions.every(s => s.synced);
+
     const dateStrForComparison = new Date(currentYear, currentMonth, d).toDateString();
     const isSelected = selectedDate === dateStrForComparison;
     const isToday = today.getDate() === d && today.getMonth() === currentMonth && today.getFullYear() === currentYear;
@@ -302,6 +306,13 @@ const CalendarWidget: React.FC<CalendarProps> = ({ history, onSelectDate, select
             />
           )}
         </div>
+        
+        {/* Unsynced indicator */}
+        {(sessions.length > 0 && !allSynced) && (
+            <div className="absolute top-1 right-1">
+                <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
+            </div>
+        )}
       </button>
     );
   }
@@ -362,6 +373,8 @@ export default function App() {
   const [sessionMode, setSessionMode] = useState<SessionMode>('EVENING');
   const [isPaused, setIsPaused] = useState(false); // Global Pause State
   const [isDarkMode, setIsDarkMode] = useState(false); // Theme State
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
   
   // Safe UUID generation with fallback
   const generateId = () => {
@@ -384,6 +397,7 @@ export default function App() {
     spatial: '',
     anecdote: '',
     memoryScore: 0,
+    synced: false,
   });
   
   const [targetItems, setTargetItems] = useState<MemoryItem[]>([]);
@@ -394,6 +408,52 @@ export default function App() {
   const [selectedHistoryDate, setSelectedHistoryDate] = useState<string | null>(null); // For calendar filtering
   
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Network status listeners
+  useEffect(() => {
+    const handleOnline = () => {
+        setIsOnline(true);
+        // Attempt auto-sync when back online
+        attemptAutoSync();
+    };
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+        window.removeEventListener('online', handleOnline);
+        window.removeEventListener('offline', handleOffline);
+    };
+  }, [history]); // Depend on history to have latest data for auto-sync logic if needed
+
+  // Auto-sync function (silent)
+  const attemptAutoSync = async () => {
+      // Check if we have unsynced items
+      const hasUnsynced = history.some(item => !item.synced);
+      if (hasUnsynced && navigator.onLine) {
+          console.log("Conexión detectada. Intentando sincronización automática...");
+          try {
+              // Only try if we have a token (pseudo-check: try calling sync)
+              // We rely on the service to handle auth state. If it throws, we catch it.
+              // Note: We avoid prompts here. If prompt needed, user must click button.
+              const gapi = (window as any).gapi;
+              if (gapi && gapi.client && gapi.client.getToken()) {
+                   setIsSyncing(true);
+                   const syncedData = await syncWithDrive(history);
+                   
+                   // Mark all as synced locally
+                   const updatedHistory = syncedData.map(item => ({...item, synced: true}));
+                   setHistory(updatedHistory);
+                   localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedHistory));
+              }
+          } catch (e) {
+              console.log("Auto-sync skipped or failed (User auth needed or network error)");
+          } finally {
+              setIsSyncing(false);
+          }
+      }
+  };
 
   useEffect(() => {
     setTargetItems(getRandomItems());
@@ -409,6 +469,12 @@ export default function App() {
         console.error("Error loading history", e);
       }
     }
+
+    // Init Google Drive if possible
+    initGoogleDrive((success) => {
+        console.log("Google Drive Initialized:", success);
+        if (success) attemptAutoSync(); // Try sync on load if online and authed
+    });
   }, []);
 
   const toggleDarkMode = () => setIsDarkMode(!isDarkMode);
@@ -428,7 +494,8 @@ export default function App() {
       id: generateId(),
       sessionType: mode,
       timestamp: Date.now(),
-      date: new Date().toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+      date: new Date().toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }),
+      synced: false
     }));
     setStep(AppStep.MORNING_RECALL);
   };
@@ -443,17 +510,29 @@ export default function App() {
     setStep(AppStep.ANALYSIS);
     setIsLoading(true);
     
+    // Offline local generation
     const aiFeedback = await generateCognitiveFeedback(preAnalysisData);
     
-    const finalData = { ...preAnalysisData, feedback: aiFeedback };
+    // Create final object
+    const finalData = { 
+        ...preAnalysisData, 
+        feedback: aiFeedback, 
+        synced: false // Default to false until pushed to cloud
+    };
     setFeedback(aiFeedback);
     
-    // Save history (Merge)
+    // Save locally IMMEDIATELY (Offline First strategy)
     const updatedHistory = [finalData, ...history];
     const uniqueHistory = Array.from(new Map(updatedHistory.map(item => [item.id, item])).values());
     
     setHistory(uniqueHistory);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(uniqueHistory));
+
+    // Try to sync if online
+    if (navigator.onLine) {
+        // We trigger the sync process but don't block the UI
+        attemptAutoSync().catch(err => console.log("Background sync failed, data is safe locally."));
+    }
 
     setIsLoading(false);
     setStep(AppStep.COMPLETED);
@@ -469,6 +548,7 @@ export default function App() {
       case AppStep.AFTERNOON_RECALL: setStep(AppStep.MID_AFTERNOON_RECALL); break;
       case AppStep.MID_AFTERNOON_RECALL: setStep(AppStep.SPATIAL_RECALL); break;
       case AppStep.SPATIAL_RECALL: setStep(AppStep.ANECDOTE); break;
+      case AppStep.ANECDOTE: setStep(AppStep.ANECDOTE); break;
       case AppStep.ANECDOTE: setStep(AppStep.MEMORY_RETRIEVAL); break;
       case AppStep.MEMORY_RETRIEVAL: handleSubmit(); break;
       default: break;
@@ -479,6 +559,32 @@ export default function App() {
     setSelectedItems(prev => 
       prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
     );
+  };
+
+  // --- Sync Logic ---
+
+  const handleDriveSync = async () => {
+    if (!navigator.onLine) {
+        alert("No hay conexión a internet. Tus datos están guardados localmente y se sincronizarán cuando recuperes la conexión.");
+        return;
+    }
+
+    setIsSyncing(true);
+    try {
+        await handleGoogleAuth(); // Force auth prompt if needed
+        const syncedData = await syncWithDrive(history);
+        
+        // Mark items as synced
+        const markedData = syncedData.map(item => ({...item, synced: true}));
+        
+        setHistory(markedData);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(markedData));
+        // alert("¡Sincronización con Google Drive completada!"); 
+    } catch (e) {
+        console.log("Sync cancelled or failed", e);
+    } finally {
+        setIsSyncing(false);
+    }
   };
 
   // --- Export/Import Logic ---
@@ -549,6 +655,27 @@ export default function App() {
     setIsPaused(!isPaused);
   };
 
+  // --- UI Helpers ---
+  const getConnectivityIcon = () => {
+      if (isSyncing) return <RefreshCw size={18} className="animate-spin text-blue-500" />;
+      if (isOnline) {
+          const unsyncedCount = history.filter(h => !h.synced).length;
+          if (unsyncedCount > 0) return <CloudOff size={18} className="text-orange-500" />; // Online but pending sync
+          return <Wifi size={18} className="text-green-500" />;
+      }
+      return <WifiOff size={18} className="text-stone-400" />;
+  };
+
+  const getConnectivityText = () => {
+      if (isSyncing) return "Sincronizando...";
+      if (isOnline) {
+          const unsyncedCount = history.filter(h => !h.synced).length;
+          if (unsyncedCount > 0) return `${unsyncedCount} por subir`;
+          return "En línea";
+      }
+      return "Offline";
+  };
+
   // --- Render Components ---
 
   const renderWelcome = () => (
@@ -602,7 +729,7 @@ export default function App() {
               <span className="font-bold text-lg font-serif">Sesión Matutina</span>
             </div>
             <p className={`text-sm ${isDarkMode ? 'text-stone-500' : 'text-stone-500'}`}>
-              Ideal para planificar y activar la atención (Método Campayo/Tocquet). Recordarás <strong>ayer</strong> para calentar.
+              Ideal para planificar y activar la atención. Recordarás <strong>ayer</strong> para calentar.
             </p>
           </button>
 
@@ -623,16 +750,30 @@ export default function App() {
               <span className="font-bold text-lg font-serif">Sesión Nocturna</span>
             </div>
             <p className={`text-sm ${isDarkMode ? 'text-stone-400' : 'text-stone-400'}`}>
-              Ideal para consolidar y archivar recuerdos (Método García Serrano). Recordarás <strong>hoy</strong>.
+              Ideal para consolidar y archivar recuerdos. Recordarás <strong>hoy</strong>.
             </p>
           </button>
         </div>
         
-        <div className="flex gap-3 justify-center mt-6">
+        <div className="flex flex-wrap gap-3 justify-center mt-6">
+          {/* Botón de Google Drive / Login */}
+          <button 
+            onClick={handleDriveSync}
+            disabled={isSyncing}
+            className={`font-medium py-3 px-6 rounded-xl border transition-all flex items-center justify-center gap-2 text-sm w-full sm:w-auto shadow-sm hover:shadow-md ${
+              isDarkMode 
+                ? 'bg-indigo-950/40 hover:bg-indigo-900/60 text-indigo-300 border-indigo-800/50' 
+                : 'bg-white hover:bg-indigo-50 text-indigo-600 border-indigo-100'
+            }`}
+          >
+            {isSyncing ? <RefreshCw size={18} className="animate-spin"/> : <Cloud size={18} />}
+            <span>{isSyncing ? "Sincronizando..." : "Iniciar Sesión con Google"}</span>
+          </button>
+
           {history.length > 0 && (
             <button 
               onClick={() => setStep(AppStep.HISTORY)}
-              className={`font-medium py-3 px-6 rounded-xl border transition-all flex items-center justify-center gap-2 text-sm ${
+              className={`font-medium py-3 px-6 rounded-xl border transition-all flex items-center justify-center gap-2 text-sm w-full sm:w-auto ${
                 isDarkMode 
                   ? 'bg-transparent hover:bg-stone-800 text-stone-400 border-stone-700' 
                   : 'bg-transparent hover:bg-stone-200 text-stone-600 border-stone-300'
@@ -644,7 +785,7 @@ export default function App() {
           
           <button 
             onClick={triggerImport}
-            className={`font-medium py-3 px-6 rounded-xl border transition-all flex items-center justify-center gap-2 text-sm ${
+            className={`font-medium py-3 px-6 rounded-xl border transition-all flex items-center justify-center gap-2 text-sm w-full sm:w-auto ${
               isDarkMode 
                 ? 'bg-transparent hover:bg-stone-800 text-stone-400 border-stone-700' 
                 : 'bg-transparent hover:bg-stone-200 text-stone-600 border-stone-300'
@@ -670,6 +811,8 @@ export default function App() {
       ? history.filter(h => new Date(h.timestamp).toDateString() === selectedHistoryDate)
       : history; 
 
+    const pendingSyncCount = history.filter(h => !h.synced).length;
+
     return (
       <div className="max-w-3xl mx-auto fade-in">
         <div className="flex flex-col sm:flex-row items-center justify-between mb-8 gap-4">
@@ -683,6 +826,22 @@ export default function App() {
           </div>
           
           <div className="flex gap-2 self-end">
+             {/* GOOGLE DRIVE BUTTON */}
+             <button 
+              onClick={handleDriveSync}
+              disabled={isSyncing}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors border ${
+                isDarkMode 
+                  ? 'bg-indigo-900/30 text-indigo-200 border-indigo-800 hover:bg-indigo-900/50' 
+                  : 'bg-white text-indigo-600 border-indigo-100 hover:bg-indigo-50'
+              }`}
+              title={isOnline ? "Sincronizar con Google Drive" : "Sin conexión - Sincronizará al conectar"}
+            >
+              {isSyncing ? <RefreshCw size={16} className="animate-spin" /> : <Cloud size={16} />} 
+              <span className="hidden sm:inline">Drive</span>
+              {pendingSyncCount > 0 && <span className="bg-orange-500 text-white text-[10px] px-1.5 rounded-full">{pendingSyncCount}</span>}
+            </button>
+
             <button 
               onClick={exportData}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors border ${
@@ -692,7 +851,7 @@ export default function App() {
               }`}
               title="Descargar copia de seguridad"
             >
-              <Download size={16} /> Descargar Todo
+              <Download size={16} /> <span className="hidden sm:inline">JSON</span>
             </button>
           </div>
         </div>
@@ -735,9 +894,22 @@ export default function App() {
             </div>
           ) : (
             displayedHistory.map((entry) => (
-              <div key={entry.id} className={`rounded-xl shadow-md border overflow-hidden fade-in ${
+              <div key={entry.id} className={`rounded-xl shadow-md border overflow-hidden fade-in relative ${
                 isDarkMode ? 'bg-stone-900 border-stone-800' : 'bg-[#FAF9F6] border-stone-200'
               }`}>
+                {/* Sync Status Icon on Card */}
+                <div className="absolute top-4 right-4 z-10">
+                    {entry.synced ? (
+                        <div className="text-green-500/50" title="Sincronizado en Drive">
+                            <Cloud size={14} />
+                        </div>
+                    ) : (
+                        <div className="text-orange-400" title="Pendiente de sincronizar">
+                            <CloudOff size={14} />
+                        </div>
+                    )}
+                </div>
+
                 <div className={`p-4 border-b flex justify-between items-center ${
                   isDarkMode ? 'bg-stone-950 border-stone-800' : 'bg-stone-100 border-stone-200'
                 }`}>
@@ -764,7 +936,7 @@ export default function App() {
                       </span>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 pr-6"> {/* Padding right for sync icon */}
                     {entry.memoryScore === 5 && <Award size={16} className="text-amber-500" />}
                     <div className={`text-sm font-medium px-3 py-1 rounded-full border ${
                       isDarkMode 
@@ -1114,6 +1286,16 @@ export default function App() {
       >
         {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
       </button>
+
+      {/* Connectivity Status Indicator (New) */}
+      <div className={`fixed top-6 left-6 z-50 flex items-center gap-2 px-3 py-1.5 rounded-full shadow-lg text-xs font-bold border transition-colors ${
+          isDarkMode 
+            ? 'bg-stone-900 border-stone-700 text-stone-300' 
+            : 'bg-white border-stone-200 text-stone-600'
+      }`}>
+          {getConnectivityIcon()}
+          <span>{getConnectivityText()}</span>
+      </div>
 
       {/* Contenedor Principal */}
       <div className="max-w-4xl mx-auto relative">

@@ -28,6 +28,7 @@ export interface JournalData {
   anecdote: string;
   memoryScore: number;
   feedback?: string;
+  synced?: boolean; // Nuevo campo para control offline/online
 }
 
 export interface MemoryItem {
