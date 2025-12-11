@@ -1,11 +1,18 @@
 const CACHE_NAME = 'neurolog-cache-v1';
 const ASSETS_TO_CACHE = [
-  '/',
-  '/index.html',
-  '/manifest.json',
+  './',
+  './index.html',
+  './manifest.json',
+  './index.tsx',
+  './App.tsx',
+  './types.ts',
+  './services/geminiService.ts',
+  './services/googleDriveService.ts',
+  './components/Timer.tsx',
   'https://cdn.tailwindcss.com',
   'https://fonts.googleapis.com/css2?family=Merriweather:wght@300;400;700&family=Inter:wght@300;400;500;600&display=swap',
-  'https://cdn-icons-png.flaticon.com/512/2823/2823616.png'
+  'https://cdn-icons-png.flaticon.com/512/2823/2823616.png',
+  'https://unpkg.com/@babel/standalone/babel.min.js'
 ];
 
 // Instalación: Cachear recursos estáticos
@@ -45,7 +52,7 @@ self.addEventListener('fetch', (event) => {
     }).catch(() => {
       // Si falla todo (offline y no en cache), retornar index si es navegación
       if (event.request.mode === 'navigate') {
-        return caches.match('/index.html');
+        return caches.match('./index.html');
       }
     })
   );

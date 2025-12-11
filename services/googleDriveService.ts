@@ -1,4 +1,4 @@
-import { JournalData } from "../types";
+import { JournalData } from "../types.ts";
 
 // IMPORTANTE: Para que esto funcione en producción, debes crear un proyecto en Google Cloud Console
 // y obtener tu CLIENT_ID. Habilita la "Google Drive API".

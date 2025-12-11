@@ -1,4 +1,4 @@
-import { JournalData } from "../types";
+import { JournalData } from "../types.ts";
 
 // Base de datos local de consejos neuroeducativos (Reemplaza a la IA)
 const MORNING_TIPS = [

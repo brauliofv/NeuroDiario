@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Timer } from './components/Timer';
-import { generateCognitiveFeedback } from './services/geminiService';
-import { handleGoogleAuth, initGoogleDrive, syncWithDrive } from './services/googleDriveService';
-import { AppStep, JournalData, MemoryItem, SessionMode } from './types';
+import { Timer } from './components/Timer.tsx';
+import { generateCognitiveFeedback } from './services/geminiService.ts';
+import { handleGoogleAuth, initGoogleDrive, syncWithDrive } from './services/googleDriveService.ts';
+import { AppStep, JournalData, MemoryItem, SessionMode } from './types.ts';
 import { 
   Brain, ChevronRight, Save, CheckCircle2, AlertCircle, Eye, EyeOff, 
   MapPin, Sun, Sunset, Coffee, BookOpen, ArrowLeft, Calendar as CalendarIcon, 
