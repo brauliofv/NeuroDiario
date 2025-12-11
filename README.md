@@ -96,7 +96,6 @@ Tu apoyo ayuda a mantener el dominio, mejorar la sincronización con la nube y d
 
 <a href="https://ko-fi.com/brauliofv" target="_blank"><img src="https://storage.ko-fi.com/cdn/kofi6.png?v=6" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" ></a>
 
-*(Reemplaza el enlace de arriba con tu enlace real de BuyMeACoffee o PayPal)*
 
 ---
 
