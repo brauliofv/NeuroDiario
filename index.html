@@ -11,11 +11,11 @@
     <link rel="manifest" href="./manifest.json">
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2823/2823616.png">
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Babel para compilar TSX en el navegador -->
+    <!-- Babel para compilar el código en tiempo real -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@300;400;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
     
-    <!-- Scripts de Google para Drive (Opcional) -->
+    <!-- Scripts de Google para Drive -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script src="https://apis.google.com/js/api.js" async defer></script>
 
@@ -23,8 +23,8 @@
       body { 
         font-family: 'Inter', sans-serif; 
         background-color: #E7E5E4; /* Stone-200 */
-        -webkit-tap-highlight-color: transparent; /* Elimina el flash azul al tocar en móviles */
-        overscroll-behavior-y: none; /* Evita el rebote de scroll en móviles */
+        -webkit-tap-highlight-color: transparent;
+        overscroll-behavior-y: none;
       }
       h1, h2, h3 {
         font-family: 'Merriweather', serif;
@@ -34,24 +34,22 @@
         from { opacity: 0; transform: translateY(15px); } 
         to { opacity: 1; transform: translateY(0); } 
       }
-      /* Soften text contrast */
       .text-content { color: #292524; } 
     </style>
   <script type="importmap">
 {
   "imports": {
-    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.556.0",
-    "react-dom/client": "https://aistudiocdn.com/react-dom@^19.2.1/client",
-    "react": "https://aistudiocdn.com/react@^19.2.1",
-    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.1/",
-    "react/": "https://aistudiocdn.com/react@^19.2.1/"
+    "lucide-react": "https://esm.sh/lucide-react@0.263.1",
+    "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+    "react": "https://esm.sh/react@18.2.0",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.2/"
   }
 }
 </script>
 </head>
   <body class="antialiased h-full">
     <div id="root" class="h-full"></div>
-    <!-- Script tipo text/babel para que Babel lo procese -->
-    <script type="text/babel" data-presets="react,typescript" data-type="module" src="./index.tsx"></script>
+    <!-- Importante: data-type="module" y extensión .js -->
+    <script type="text/babel" data-presets="react,typescript" data-type="module" src="./index.js"></script>
   </body>
 </html>
