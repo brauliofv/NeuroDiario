@@ -94,7 +94,7 @@ El desarrollo de herramientas de salud mental accesibles y gratuitas requiere ti
 
 Tu apoyo ayuda a mantener el dominio, mejorar la sincronización con la nube y desarrollar nuevas funcionalidades de IA.
 
-<a href="https://ko-fi.com/brauliofv" target="_blank"><img src="h[ttps://cdn.buymeacoffee.com/buttons/v2/default-yellow.png](https://img.shields.io/badge/Ko--fi-Buy%20me%20a%20Skill-F16061?style=for-the-badge&logo=ko-fi&logoColor=white)" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" ></a>
+<a href="https://ko-fi.com/brauliofv" target="_blank"><img src="https://storage.ko-fi.com/cdn/kofi6.png?v=6" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" ></a>
 
 *(Reemplaza el enlace de arriba con tu enlace real de BuyMeACoffee o PayPal)*
 
