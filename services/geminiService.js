@@ -25,15 +25,18 @@ const RECOVERY_TIPS = [
   "Para mejorar la retención, intenta reducir la multitarea mañana. El cerebro codifica mejor **una cosa a la vez**."
 ];
 
-export const generateCognitiveFeedback = async (data: JournalData): Promise<string> => {
+export const generateCognitiveFeedback = async (data) => {
+  // Simulamos un pequeño tiempo de "análisis" para dar peso a la experiencia, 
+  // aunque el cálculo es instantáneo localmente.
   await new Promise(resolve => setTimeout(resolve, 1500));
 
   const isMorning = data.sessionType === 'MORNING';
   const score = data.memoryScore;
   
   let feedbackPrefix = "";
-  let tipPool: string[] = [];
+  let tipPool = [];
 
+  // Lógica de selección de feedback basada en puntuación y momento
   if (score === 5) {
     feedbackPrefix = "¡Memoria perfecta (5/5)! Tu hipocampo está en plena forma. ";
     tipPool = isMorning ? MORNING_TIPS : EVENING_TIPS;
@@ -42,9 +45,11 @@ export const generateCognitiveFeedback = async (data: JournalData): Promise<stri
     tipPool = isMorning ? MORNING_TIPS : EVENING_TIPS;
   } else {
     feedbackPrefix = "Hoy ha sido un reto para tu memoria de trabajo. ";
+    // Si la memoria falló, mezclamos consejos de recuperación con consejos del momento
     tipPool = [...RECOVERY_TIPS, ...(isMorning ? MORNING_TIPS.slice(0, 2) : EVENING_TIPS.slice(0, 2))];
   }
 
+  // Selección aleatoria del consejo
   const randomIndex = Math.floor(Math.random() * tipPool.length);
   const selectedTip = tipPool[randomIndex];
 

@@ -10,7 +10,8 @@ import {
   ChevronLeft, Cloud, CloudOff, Wifi, WifiOff, RefreshCw
 } from 'lucide-react';
 
-const MEMORY_ITEMS_POOL: MemoryItem[] = [
+// Pool of objects for memory exercise
+const MEMORY_ITEMS_POOL = [
   { id: '1', emoji: '🚲', name: 'Bicicleta' },
   { id: '2', emoji: '🎸', name: 'Guitarra' },
   { id: '3', emoji: '🌵', name: 'Cactus' },
@@ -30,6 +31,7 @@ const MEMORY_ITEMS_POOL: MemoryItem[] = [
 
 const STORAGE_KEY = 'neurolog_sessions';
 
+// Dynamic texts based on mode
 const PROMPTS = {
   [AppStep.MORNING_RECALL]: {
     EVENING: {
@@ -110,16 +112,13 @@ const getRandomItems = () => {
   return shuffled.slice(0, 5);
 };
 
-interface InteractiveFeedbackProps {
-  text: string;
-  isDarkMode: boolean;
-}
-
-const InteractiveFeedback: React.FC<InteractiveFeedbackProps> = ({ text, isDarkMode }) => {
-  const [selectedTerm, setSelectedTerm] = useState<string | null>(null);
+// --- Component for Interactive Feedback ---
+const InteractiveFeedback = ({ text, isDarkMode }) => {
+  const [selectedTerm, setSelectedTerm] = useState(null);
 
   if (!text) return null;
 
+  // Split text by double asterisks
   const parts = text.split(/\*\*(.*?)\*\*/g);
 
   return (
@@ -127,6 +126,7 @@ const InteractiveFeedback: React.FC<InteractiveFeedbackProps> = ({ text, isDarkM
       <div className="leading-relaxed">
         {parts.map((part, index) => {
           if (index % 2 === 1) {
+            // Bold part -> Interactive Button
             return (
               <button
                 key={index}
@@ -146,6 +146,7 @@ const InteractiveFeedback: React.FC<InteractiveFeedbackProps> = ({ text, isDarkM
         })}
       </div>
 
+      {/* Modal for selected term */}
       {selectedTerm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <div className={`rounded-xl shadow-2xl max-w-sm w-full p-6 border-2 relative transition-colors ${
@@ -199,31 +200,26 @@ const InteractiveFeedback: React.FC<InteractiveFeedbackProps> = ({ text, isDarkM
   );
 };
 
-interface CalendarProps {
-  history: JournalData[];
-  onSelectDate: (date: string | null) => void;
-  selectedDate: string | null;
-  isDarkMode: boolean;
-}
-
-const CalendarWidget: React.FC<CalendarProps> = ({ history, onSelectDate, selectedDate, isDarkMode }) => {
+// --- Calendar Component ---
+const CalendarWidget = ({ history, onSelectDate, selectedDate, isDarkMode }) => {
   const [viewDate, setViewDate] = useState(new Date());
 
-  const getDaysInMonth = (year: number, month: number) => new Date(year, month + 1, 0).getDate();
-  const getFirstDayOfMonth = (year: number, month: number) => {
+  const getDaysInMonth = (year, month) => new Date(year, month + 1, 0).getDate();
+  const getFirstDayOfMonth = (year, month) => {
     return new Date(year, month, 1).getDay(); 
   };
 
   const daysInMonth = getDaysInMonth(viewDate.getFullYear(), viewDate.getMonth());
   const firstDay = getFirstDayOfMonth(viewDate.getFullYear(), viewDate.getMonth());
   
+  // Group sessions by day
   const sessionsByDay = history.reduce((acc, session) => {
     const dateObj = new Date(session.timestamp);
     const dayKey = `${dateObj.getFullYear()}-${dateObj.getMonth()}-${dateObj.getDate()}`;
     if (!acc[dayKey]) acc[dayKey] = [];
     acc[dayKey].push(session);
     return acc;
-  }, {} as Record<string, JournalData[]>);
+  }, {});
 
   const prevMonth = () => {
     setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() - 1, 1));
@@ -237,7 +233,9 @@ const CalendarWidget: React.FC<CalendarProps> = ({ history, onSelectDate, select
   const currentMonth = viewDate.getMonth();
   const today = new Date();
   
+  // Generate calendar grid
   const days = [];
+  // Padding for start
   for (let i = 0; i < firstDay; i++) {
     days.push(<div key={`pad-${i}`} className="h-14 sm:h-16"></div>);
   }
@@ -248,6 +246,7 @@ const CalendarWidget: React.FC<CalendarProps> = ({ history, onSelectDate, select
     const hasMorning = sessions.some(s => s.sessionType === 'MORNING');
     const hasEvening = sessions.some(s => s.sessionType === 'EVENING');
     
+    // Check local sync status
     const allSynced = sessions.every(s => s.synced);
 
     const dateStrForComparison = new Date(currentYear, currentMonth, d).toDateString();
@@ -280,6 +279,7 @@ const CalendarWidget: React.FC<CalendarProps> = ({ history, onSelectDate, select
       >
         <span className={`font-medium text-sm ${isSelected ? 'text-white' : (isDarkMode ? 'text-stone-300' : 'text-stone-700')}`}>{d}</span>
         
+        {/* Dots Container */}
         <div className="flex gap-1 mt-1">
           {hasMorning && (
             <div 
@@ -295,6 +295,7 @@ const CalendarWidget: React.FC<CalendarProps> = ({ history, onSelectDate, select
           )}
         </div>
         
+        {/* Unsynced indicator */}
         {(sessions.length > 0 && !allSynced) && (
             <div className="absolute top-1 right-1">
                 <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
@@ -356,21 +357,23 @@ const CalendarWidget: React.FC<CalendarProps> = ({ history, onSelectDate, select
 
 
 export default function App() {
-  const [step, setStep] = useState<AppStep>(AppStep.WELCOME);
-  const [sessionMode, setSessionMode] = useState<SessionMode>('EVENING');
-  const [isPaused, setIsPaused] = useState(false); 
-  const [isDarkMode, setIsDarkMode] = useState(false); 
+  const [step, setStep] = useState(AppStep.WELCOME);
+  const [sessionMode, setSessionMode] = useState('EVENING');
+  const [isPaused, setIsPaused] = useState(false); // Global Pause State
+  const [isDarkMode, setIsDarkMode] = useState(false); // Theme State
   const [isSyncing, setIsSyncing] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   
+  // Safe UUID generation with fallback
   const generateId = () => {
     if (typeof crypto !== 'undefined' && crypto.randomUUID) {
       return crypto.randomUUID();
     }
+    // Fallback for older browsers or insecure contexts
     return Date.now().toString(36) + Math.random().toString(36).substr(2);
   };
   
-  const [data, setData] = useState<JournalData>({
+  const [data, setData] = useState({
     id: generateId(),
     date: new Date().toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }),
     timestamp: Date.now(),
@@ -385,18 +388,20 @@ export default function App() {
     synced: false,
   });
   
-  const [targetItems, setTargetItems] = useState<MemoryItem[]>([]);
-  const [selectedItems, setSelectedItems] = useState<string[]>([]);
-  const [feedback, setFeedback] = useState<string>('');
+  const [targetItems, setTargetItems] = useState([]);
+  const [selectedItems, setSelectedItems] = useState([]);
+  const [feedback, setFeedback] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [history, setHistory] = useState<JournalData[]>([]);
-  const [selectedHistoryDate, setSelectedHistoryDate] = useState<string | null>(null);
+  const [history, setHistory] = useState([]);
+  const [selectedHistoryDate, setSelectedHistoryDate] = useState(null); // For calendar filtering
   
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef(null);
 
+  // Network status listeners
   useEffect(() => {
     const handleOnline = () => {
         setIsOnline(true);
+        // Attempt auto-sync when back online
         attemptAutoSync();
     };
     const handleOffline = () => setIsOnline(false);
@@ -408,24 +413,30 @@ export default function App() {
         window.removeEventListener('online', handleOnline);
         window.removeEventListener('offline', handleOffline);
     };
-  }, [history]);
+  }, [history]); // Depend on history to have latest data for auto-sync logic if needed
 
+  // Auto-sync function (silent)
   const attemptAutoSync = async () => {
+      // Check if we have unsynced items
       const hasUnsynced = history.some(item => !item.synced);
       if (hasUnsynced && navigator.onLine) {
           console.log("Conexión detectada. Intentando sincronización automática...");
           try {
-              const gapi = (window as any).gapi;
+              // Only try if we have a token (pseudo-check: try calling sync)
+              // We rely on the service to handle auth state. If it throws, we catch it.
+              // Note: We avoid prompts here. If prompt needed, user must click button.
+              const gapi = (window).gapi;
               if (gapi && gapi.client && gapi.client.getToken()) {
                    setIsSyncing(true);
                    const syncedData = await syncWithDrive(history);
                    
+                   // Mark all as synced locally
                    const updatedHistory = syncedData.map(item => ({...item, synced: true}));
                    setHistory(updatedHistory);
                    localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedHistory));
               }
           } catch (e) {
-              console.log("Auto-sync skipped or failed");
+              console.log("Auto-sync skipped or failed (User auth needed or network error)");
           } finally {
               setIsSyncing(false);
           }
@@ -434,27 +445,32 @@ export default function App() {
 
   useEffect(() => {
     setTargetItems(getRandomItems());
+    // Load history
     const savedHistory = localStorage.getItem(STORAGE_KEY);
     if (savedHistory) {
       try {
         const parsedHistory = JSON.parse(savedHistory);
-        parsedHistory.sort((a: JournalData, b: JournalData) => b.timestamp - a.timestamp);
+        // Sort descending
+        parsedHistory.sort((a, b) => b.timestamp - a.timestamp);
         setHistory(parsedHistory);
       } catch (e) {
         console.error("Error loading history", e);
       }
     }
 
+    // Init Google Drive if possible
     initGoogleDrive((success) => {
         console.log("Google Drive Initialized:", success);
-        if (success) attemptAutoSync();
+        if (success) attemptAutoSync(); // Try sync on load if online and authed
     });
   }, []);
 
   const toggleDarkMode = () => setIsDarkMode(!isDarkMode);
 
-  const startSession = (mode: SessionMode) => {
+  const startSession = (mode) => {
     setSessionMode(mode);
+    
+    // Automatic theme adjustment based on session type
     if (mode === 'EVENING') {
       setIsDarkMode(true);
     } else {
@@ -474,6 +490,7 @@ export default function App() {
 
   const handleSubmit = useCallback(async () => {
     const correctCount = selectedItems.filter(id => targetItems.some(t => t.id === id)).length;
+    // Simple penalty
     const finalScore = Math.max(0, correctCount - (selectedItems.length - correctCount));
     
     const preAnalysisData = { ...data, memoryScore: finalScore };
@@ -481,22 +498,27 @@ export default function App() {
     setStep(AppStep.ANALYSIS);
     setIsLoading(true);
     
+    // Offline local generation
     const aiFeedback = await generateCognitiveFeedback(preAnalysisData);
     
+    // Create final object
     const finalData = { 
         ...preAnalysisData, 
         feedback: aiFeedback, 
-        synced: false
+        synced: false // Default to false until pushed to cloud
     };
     setFeedback(aiFeedback);
     
+    // Save locally IMMEDIATELY (Offline First strategy)
     const updatedHistory = [finalData, ...history];
     const uniqueHistory = Array.from(new Map(updatedHistory.map(item => [item.id, item])).values());
     
     setHistory(uniqueHistory);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(uniqueHistory));
 
+    // Try to sync if online
     if (navigator.onLine) {
+        // We trigger the sync process but don't block the UI
         attemptAutoSync().catch(err => console.log("Background sync failed, data is safe locally."));
     }
 
@@ -505,7 +527,7 @@ export default function App() {
   }, [data, selectedItems, targetItems, history]);
 
   const handleNext = useCallback(() => {
-    if (isPaused) return; 
+    if (isPaused) return; // Prevent next if paused
     window.scrollTo({ top: 0, behavior: 'smooth' });
     switch (step) {
       case AppStep.MORNING_RECALL: setStep(AppStep.MID_MORNING_RECALL); break;
@@ -521,11 +543,13 @@ export default function App() {
     }
   }, [step, isPaused, handleSubmit]);
 
-  const toggleSelection = (id: string) => {
+  const toggleSelection = (id) => {
     setSelectedItems(prev => 
       prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
     );
   };
+
+  // --- Sync Logic ---
 
   const handleDriveSync = async () => {
     if (!navigator.onLine) {
@@ -535,19 +559,23 @@ export default function App() {
 
     setIsSyncing(true);
     try {
-        await handleGoogleAuth(); 
+        await handleGoogleAuth(); // Force auth prompt if needed
         const syncedData = await syncWithDrive(history);
         
+        // Mark items as synced
         const markedData = syncedData.map(item => ({...item, synced: true}));
         
         setHistory(markedData);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(markedData));
+        // alert("¡Sincronización con Google Drive completada!"); 
     } catch (e) {
         console.log("Sync cancelled or failed", e);
     } finally {
         setIsSyncing(false);
     }
   };
+
+  // --- Export/Import Logic ---
 
   const exportData = () => {
     const dataStr = JSON.stringify(history, null, 2);
@@ -564,22 +592,22 @@ export default function App() {
     fileInputRef.current?.click();
   };
 
-  const importData = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const importData = (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
-        const content = e.target?.result as string;
+        const content = e.target?.result;
         const parsedData = JSON.parse(content);
         
         if (Array.isArray(parsedData)) {
-          const currentMap = new Map<string, JournalData>();
+          const currentMap = new Map();
           history.forEach(item => currentMap.set(item.id, item));
           
           let addedCount = 0;
-          parsedData.forEach((item: JournalData) => {
+          parsedData.forEach((item) => {
             if (!currentMap.has(item.id)) {
               currentMap.set(item.id, item);
               addedCount++;
@@ -615,11 +643,12 @@ export default function App() {
     setIsPaused(!isPaused);
   };
 
+  // --- UI Helpers ---
   const getConnectivityIcon = () => {
       if (isSyncing) return <RefreshCw size={18} className="animate-spin text-blue-500" />;
       if (isOnline) {
           const unsyncedCount = history.filter(h => !h.synced).length;
-          if (unsyncedCount > 0) return <CloudOff size={18} className="text-orange-500" />; 
+          if (unsyncedCount > 0) return <CloudOff size={18} className="text-orange-500" />; // Online but pending sync
           return <Wifi size={18} className="text-green-500" />;
       }
       return <WifiOff size={18} className="text-stone-400" />;
@@ -635,160 +664,131 @@ export default function App() {
       return "Offline";
   };
 
-  return (
-    <div className={`min-h-screen py-8 px-4 sm:px-6 lg:px-8 transition-colors duration-500 relative ${
-      isDarkMode ? 'bg-stone-950' : 'bg-[#E7E5E4]'
-    }`}>
-      
-      <button 
-        onClick={toggleDarkMode}
-        className={`fixed top-6 right-6 z-50 p-3 rounded-full shadow-lg transition-all transform hover:scale-110 ${
-          isDarkMode 
-            ? 'bg-stone-800 text-amber-400 hover:bg-stone-700' 
-            : 'bg-white text-stone-600 hover:text-amber-600 hover:bg-amber-50'
-        }`}
-        title={isDarkMode ? "Cambiar a Modo Claro" : "Cambiar a Modo Oscuro"}
-      >
-        {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
-      </button>
+  // --- Render Components ---
 
-      <div className={`fixed top-6 left-6 z-50 flex items-center gap-2 px-3 py-1.5 rounded-full shadow-lg text-xs font-bold border transition-colors ${
-          isDarkMode 
-            ? 'bg-stone-900 border-stone-700 text-stone-300' 
-            : 'bg-white border-stone-200 text-stone-600'
+  const renderWelcome = () => (
+    <div className="text-center max-w-lg mx-auto fade-in pt-6">
+      <div className={`p-8 rounded-full inline-block mb-6 shadow-inner border-4 ${
+        isDarkMode ? 'bg-stone-800 border-stone-700' : 'bg-[#E7E5E4] border-white'
       }`}>
-          {getConnectivityIcon()}
-          <span>{getConnectivityText()}</span>
+        <Brain size={64} className={isDarkMode ? "text-stone-400" : "text-stone-700"} />
       </div>
-
-      <div className="max-w-4xl mx-auto relative">
-        {step !== AppStep.WELCOME && step !== AppStep.COMPLETED && step !== AppStep.HISTORY && step !== AppStep.ANALYSIS && (
-          <button
-            onClick={togglePause}
-            className={`fixed bottom-8 right-8 z-50 p-4 rounded-full shadow-2xl transition-all transform hover:scale-110 focus:outline-none focus:ring-4 ${
+      <h1 className={`text-5xl font-bold mb-4 font-serif tracking-tight ${
+        isDarkMode ? 'text-stone-100' : 'text-stone-800'
+      }`}>NeuroLog</h1>
+      <div className="flex items-center justify-center gap-2 mb-8">
+        <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide border ${
+          isDarkMode 
+            ? 'bg-stone-800 text-stone-400 border-stone-700' 
+            : 'bg-stone-200 text-stone-600 border-stone-300'
+        }`}>
+          Nivel: {calculateLevel()}
+        </span>
+        <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide border ${
+          isDarkMode
+            ? 'bg-amber-900/30 text-amber-500 border-amber-900/50'
+            : 'bg-amber-100 text-amber-700 border-amber-200'
+        }`}>
+          Sesiones: {history.length}
+        </span>
+      </div>
+      <p className={`text-xl mb-10 leading-relaxed ${
+        isDarkMode ? 'text-stone-400' : 'text-stone-600'
+      }`}>
+        Tu gimnasio mental personal. Elige tu momento para entrenar la memoria episódica.
+      </p>
+      <div className="flex flex-col gap-4">
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <button 
+            onClick={() => startSession('MORNING')}
+            className={`group border-2 p-6 rounded-xl shadow-sm hover:shadow-md transition-all text-left flex flex-col gap-3 ${
               isDarkMode 
-                ? 'bg-stone-700 text-white hover:bg-stone-600 focus:ring-stone-600' 
-                : 'bg-stone-800 text-white hover:bg-stone-700 focus:ring-stone-300'
+                ? 'bg-stone-900 border-stone-700 hover:border-amber-700 hover:bg-stone-800 text-stone-200' 
+                : 'bg-white hover:bg-amber-50 border-amber-200 text-stone-700'
             }`}
-            title={isPaused ? "Reanudar Sesión" : "Pausar Sesión"}
           >
-            {isPaused ? <Play size={28} /> : <Pause size={28} />}
-          </button>
-        )}
-
-        {isPaused && (
-          <div className="fixed inset-0 z-40 bg-stone-950/90 backdrop-blur-sm flex flex-col items-center justify-center text-white fade-in">
-            <div className="bg-stone-900 p-8 rounded-2xl shadow-2xl text-center max-w-sm border border-stone-800">
-              <Pause size={64} className="mx-auto mb-6 text-amber-500" />
-              <h2 className="text-3xl font-serif font-bold mb-4 text-stone-200">Sesión Pausada</h2>
-              <p className="text-stone-400 mb-8">Tómate un respiro. Tu progreso está seguro.</p>
-              <button 
-                onClick={togglePause}
-                className="bg-amber-600 hover:bg-amber-700 text-white font-bold py-3 px-8 rounded-xl transition-all w-full flex items-center justify-center gap-2"
-              >
-                <Play size={20} /> Continuar
-              </button>
-            </div>
-          </div>
-        )}
-
-        {step !== AppStep.WELCOME && step !== AppStep.COMPLETED && step !== AppStep.HISTORY && (
-          <div className="w-full mb-12 px-2">
-            <div className={`flex justify-between text-xs font-bold uppercase tracking-wider mb-3 ${
-              isDarkMode ? 'text-stone-500' : 'text-stone-400'
-            }`}>
-              <span>Inicio</span>
-              <span>Media M.</span>
-              <span>Codif.</span>
-              <span>Tarde</span>
-              <span>Media T.</span>
-              <span>Espacial</span>
-              <span>Anécdota</span>
-              <span>Recup.</span>
-            </div>
-            <div className={`h-3 rounded-full overflow-hidden shadow-inner ${
-              isDarkMode ? 'bg-stone-900' : 'bg-stone-200'
-            }`}>
-              <div 
-                className={`h-full transition-all duration-700 ease-in-out relative ${
-                  isDarkMode ? 'bg-stone-500' : 'bg-stone-600'
-                }`}
-                style={{ 
-                  width: `${
-                    step === AppStep.MORNING_RECALL ? 10 :
-                    step === AppStep.MID_MORNING_RECALL ? 22 :
-                    step === AppStep.MEMORY_ENCODING ? 35 :
-                    step === AppStep.AFTERNOON_RECALL ? 48 :
-                    step === AppStep.MID_AFTERNOON_RECALL ? 60 :
-                    step === AppStep.SPATIAL_RECALL ? 72 : 
-                    step === AppStep.ANECDOTE ? 85 : 100
-                  }%` 
-                }}
-              >
-                <div className="absolute top-0 right-0 bottom-0 w-full bg-gradient-to-l from-white/20 to-transparent"></div>
+            <div className="flex items-center gap-3">
+              <div className={`p-2 rounded-full transition-transform group-hover:scale-110 ${
+                isDarkMode ? 'bg-amber-900/40 text-amber-500' : 'bg-amber-100 text-amber-600'
+              }`}>
+                <Sun size={24} />
               </div>
+              <span className="font-bold text-lg font-serif">Sesión Matutina</span>
             </div>
-          </div>
-        )}
+            <p className={`text-sm ${isDarkMode ? 'text-stone-500' : 'text-stone-500'}`}>
+              Ideal para planificar y activar la atención. Recordarás <strong>ayer</strong> para calentar.
+            </p>
+          </button>
 
-        {step === AppStep.WELCOME && renderWelcome()}
+          <button 
+            onClick={() => startSession('EVENING')}
+            className={`group p-6 rounded-xl shadow-lg hover:shadow-xl transition-all text-left flex flex-col gap-3 border-2 ${
+               isDarkMode 
+                ? 'bg-stone-800 border-stone-600 hover:border-stone-500 text-stone-100'
+                : 'bg-stone-800 hover:bg-stone-700 text-[#FAF9F6] border-stone-800'
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <div className={`p-2 rounded-full transition-transform group-hover:scale-110 ${
+                isDarkMode ? 'bg-stone-700 text-indigo-300' : 'bg-stone-700 text-stone-300'
+              }`}>
+                <Moon size={24} />
+              </div>
+              <span className="font-bold text-lg font-serif">Sesión Nocturna</span>
+            </div>
+            <p className={`text-sm ${isDarkMode ? 'text-stone-400' : 'text-stone-400'}`}>
+              Ideal para consolidar y archivar recuerdos. Recordarás <strong>hoy</strong>.
+            </p>
+          </button>
+        </div>
         
-        {step === AppStep.MORNING_RECALL && renderSection(
-          AppStep.MORNING_RECALL,
-          data.morning,
-          'morning',
-          120, 
-          <Sun size={24}/>
-        )}
+        <div className="flex flex-wrap gap-3 justify-center mt-6">
+          {/* Botón de Google Drive / Login */}
+          <button 
+            onClick={handleDriveSync}
+            disabled={isSyncing}
+            className={`font-medium py-3 px-6 rounded-xl border transition-all flex items-center justify-center gap-2 text-sm w-full sm:w-auto shadow-sm hover:shadow-md ${
+              isDarkMode 
+                ? 'bg-indigo-950/40 hover:bg-indigo-900/60 text-indigo-300 border-indigo-800/50' 
+                : 'bg-white hover:bg-indigo-50 text-indigo-600 border-indigo-100'
+            }`}
+          >
+            {isSyncing ? <RefreshCw size={18} className="animate-spin"/> : <Cloud size={18} />}
+            <span>{isSyncing ? "Sincronizando..." : "Iniciar Sesión con Google"}</span>
+          </button>
 
-        {step === AppStep.MID_MORNING_RECALL && renderSection(
-          AppStep.MID_MORNING_RECALL,
-          data.midMorning,
-          'midMorning',
-          120,
-          <Coffee size={24}/>
-        )}
-
-        {step === AppStep.MEMORY_ENCODING && renderMemoryEncoding()}
-
-        {step === AppStep.AFTERNOON_RECALL && renderSection(
-          AppStep.AFTERNOON_RECALL,
-          data.afternoon,
-          'afternoon',
-          120,
-          <Sun size={24} className="text-orange-500"/>
-        )}
-
-        {step === AppStep.MID_AFTERNOON_RECALL && renderSection(
-          AppStep.MID_AFTERNOON_RECALL,
-          data.midAfternoon,
-          'midAfternoon',
-          120,
-          <CloudRain size={24}/>
-        )}
-
-        {step === AppStep.SPATIAL_RECALL && renderSection(
-          AppStep.SPATIAL_RECALL,
-          data.spatial,
-          'spatial',
-          120,
-          <MapPin size={24}/>
-        )}
-        
-        {step === AppStep.ANECDOTE && renderSection(
-          AppStep.ANECDOTE,
-          data.anecdote,
-          'anecdote',
-          120,
-          <Sparkles size={24}/>
-        )}
-
-        {step === AppStep.MEMORY_RETRIEVAL && renderMemoryRetrieval()}
-        
-        {step === AppStep.ANALYSIS && renderAnalysis()}
-        
-        {step === AppStep.COMPLETED && renderCompleted()}
-
+          {history.length > 0 && (
+            <button 
+              onClick={() => setStep(AppStep.HISTORY)}
+              className={`font-medium py-3 px-6 rounded-xl border transition-all flex items-center justify-center gap-2 text-sm w-full sm:w-auto ${
+                isDarkMode 
+                  ? 'bg-transparent hover:bg-stone-800 text-stone-400 border-stone-700' 
+                  : 'bg-transparent hover:bg-stone-200 text-stone-600 border-stone-300'
+              }`}
+            >
+              <BookOpen size={18} /> Ver Remembranzas
+            </button>
+          )}
+          
+          <button 
+            onClick={triggerImport}
+            className={`font-medium py-3 px-6 rounded-xl border transition-all flex items-center justify-center gap-2 text-sm w-full sm:w-auto ${
+              isDarkMode 
+                ? 'bg-transparent hover:bg-stone-800 text-stone-400 border-stone-700' 
+                : 'bg-transparent hover:bg-stone-200 text-stone-600 border-stone-300'
+            }`}
+          >
+            <Upload size={18} /> Cargar Respaldo
+          </button>
+          <input 
+            type="file" 
+            ref={fileInputRef} 
+            onChange={importData} 
+            className="hidden" 
+            accept=".json"
+          />
+        </div>
       </div>
     </div>
   );
