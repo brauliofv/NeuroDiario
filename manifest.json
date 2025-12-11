@@ -1,0 +1,21 @@
+{
+  "short_name": "NeuroLog",
+  "name": "NeuroLog - Diario de Memoria",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/2823/2823616.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/2823/2823616.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#0c0a09",
+  "background_color": "#0c0a09",
+  "orientation": "portrait"
+}
