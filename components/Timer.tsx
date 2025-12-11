@@ -1,14 +1,24 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Clock } from 'lucide-react';
 
-window.Timer = ({ durationSeconds, onExpire, isPaused = false, label = "Tiempo Restante", darkMode = false }) => {
+interface TimerProps {
+  durationSeconds: number;
+  onExpire: () => void;
+  isPaused?: boolean;
+  label?: string;
+  darkMode?: boolean;
+}
+
+export const Timer: React.FC<TimerProps> = ({ durationSeconds, onExpire, isPaused = false, label = "Tiempo Restante", darkMode = false }) => {
   const [timeLeft, setTimeLeft] = useState(durationSeconds);
   const onExpireRef = useRef(onExpire);
 
+  // Mantener la referencia actualizada sin disparar efectos
   useEffect(() => {
     onExpireRef.current = onExpire;
   }, [onExpire]);
 
+  // Reset timer if duration changes explicitly
   useEffect(() => {
     setTimeLeft(durationSeconds);
   }, [durationSeconds]);
@@ -20,6 +30,7 @@ window.Timer = ({ durationSeconds, onExpire, isPaused = false, label = "Tiempo R
       setTimeLeft((prev) => {
         if (prev <= 1) {
           clearInterval(intervalId);
+          // Usar la referencia para llamar a la función
           if (onExpireRef.current) {
             setTimeout(() => onExpireRef.current(), 0);
           }
@@ -30,7 +41,7 @@ window.Timer = ({ durationSeconds, onExpire, isPaused = false, label = "Tiempo R
     }, 1000);
 
     return () => clearInterval(intervalId);
-  }, [isPaused]);
+  }, [isPaused]); // Solo depende de isPaused (y el montaje)
 
   const minutes = Math.floor(timeLeft / 60);
   const seconds = timeLeft % 60;

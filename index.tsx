@@ -1,14 +1,15 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-
-const { App } = window;
+import App from './App.tsx';
 
 const container = document.getElementById('root');
 if (!container) throw new Error('Failed to find the root element');
 const root = createRoot(container);
 
+// Registro del Service Worker para soporte Offline
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
+    // Ruta relativa ./sw.js
     navigator.serviceWorker.register('./sw.js').then(registration => {
       console.log('SW registered: ', registration);
     }).catch(registrationError => {

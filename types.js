@@ -1,4 +1,4 @@
-export const AppStep = {
+window.AppStep = {
   WELCOME: 'WELCOME',
   MORNING_RECALL: 'MORNING_RECALL',
   MID_MORNING_RECALL: 'MID_MORNING_RECALL',

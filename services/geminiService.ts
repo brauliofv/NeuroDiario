@@ -1,4 +1,6 @@
-// Base de datos local de consejos neuroeducativos
+import { JournalData } from "../types.ts";
+
+// Base de datos local de consejos neuroeducativos (Reemplaza a la IA)
 const MORNING_TIPS = [
   "¡Gran comienzo! Para hoy, aplica la **Visualización Creativa**: Antes de hacer una tarea, imagínala terminada con éxito en tu mente.",
   "Bien recordado. Hoy usa el **Fichero Mental**: Asocia tus tareas pendientes a objetos de tu habitación para no olvidarlas.",
@@ -23,15 +25,18 @@ const RECOVERY_TIPS = [
   "Para mejorar la retención, intenta reducir la multitarea mañana. El cerebro codifica mejor **una cosa a la vez**."
 ];
 
-window.generateCognitiveFeedback = async (data) => {
+export const generateCognitiveFeedback = async (data: JournalData): Promise<string> => {
+  // Simulamos un pequeño tiempo de "análisis" para dar peso a la experiencia, 
+  // aunque el cálculo es instantáneo localmente.
   await new Promise(resolve => setTimeout(resolve, 1500));
 
   const isMorning = data.sessionType === 'MORNING';
   const score = data.memoryScore;
   
   let feedbackPrefix = "";
-  let tipPool = [];
+  let tipPool: string[] = [];
 
+  // Lógica de selección de feedback basada en puntuación y momento
   if (score === 5) {
     feedbackPrefix = "¡Memoria perfecta (5/5)! Tu hipocampo está en plena forma. ";
     tipPool = isMorning ? MORNING_TIPS : EVENING_TIPS;
@@ -40,9 +45,11 @@ window.generateCognitiveFeedback = async (data) => {
     tipPool = isMorning ? MORNING_TIPS : EVENING_TIPS;
   } else {
     feedbackPrefix = "Hoy ha sido un reto para tu memoria de trabajo. ";
+    // Si la memoria falló, mezclamos consejos de recuperación con consejos del momento
     tipPool = [...RECOVERY_TIPS, ...(isMorning ? MORNING_TIPS.slice(0, 2) : EVENING_TIPS.slice(0, 2))];
   }
 
+  // Selección aleatoria del consejo
   const randomIndex = Math.floor(Math.random() * tipPool.length);
   const selectedTip = tipPool[randomIndex];
 
