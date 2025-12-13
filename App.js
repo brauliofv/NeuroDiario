@@ -538,6 +538,334 @@ window.App = function() {
       return "Offline";
   };
 
+
+  // --- INICIO DEL CÓDIGO A PEGAR EN App.js (Antes del return) ---
+
+  const renderWelcome = () => (
+    <div className="flex flex-col items-center justify-center min-h-[80vh] text-center space-y-8 animate-in fade-in zoom-in duration-500">
+      <div className={`p-6 rounded-3xl shadow-2xl mb-4 ${isDarkMode ? 'bg-stone-800' : 'bg-white'}`}>
+        <Brain size={64} className={isDarkMode ? 'text-amber-400' : 'text-amber-600'} />
+      </div>
+      <div>
+        <h1 className={`text-4xl sm:text-5xl font-serif font-bold mb-4 ${isDarkMode ? 'text-stone-100' : 'text-stone-900'}`}>
+          NeuroLog
+        </h1>
+        <p className={`text-lg max-w-md mx-auto leading-relaxed ${isDarkMode ? 'text-stone-400' : 'text-stone-600'}`}>
+          Entrenamiento cognitivo diario para fortalecer tu memoria episódica y recuperar tu atención.
+        </p>
+      </div>
+
+      <div className="grid gap-4 w-full max-w-xs">
+        <button
+          onClick={() => startSession('MORNING')}
+          className="group relative flex items-center justify-center gap-3 w-full py-4 px-6 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-xl font-bold transition-all transform hover:scale-105 shadow-sm border-2 border-amber-200"
+        >
+          <Sun size={20} className="text-amber-600" />
+          <span>Sesión Matutina</span>
+          <div className="absolute right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+            <ChevronRight size={16} />
+          </div>
+        </button>
+
+        <button
+          onClick={() => startSession('EVENING')}
+          className={`group relative flex items-center justify-center gap-3 w-full py-4 px-6 rounded-xl font-bold transition-all transform hover:scale-105 shadow-xl border-2 ${
+            isDarkMode 
+              ? 'bg-stone-800 text-stone-200 border-stone-700 hover:bg-stone-700' 
+              : 'bg-stone-900 text-white border-stone-900 hover:bg-stone-800'
+          }`}
+        >
+          <Moon size={20} className={isDarkMode ? 'text-indigo-400' : 'text-indigo-200'} />
+          <span>Sesión Nocturna</span>
+          <div className="absolute right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+            <ChevronRight size={16} />
+          </div>
+        </button>
+        
+        <button
+           onClick={() => setStep(AppStep.HISTORY)}
+           className={`mt-4 text-sm font-medium underline underline-offset-4 decoration-2 decoration-amber-500/30 hover:decoration-amber-500 transition-all ${isDarkMode ? 'text-stone-500 hover:text-stone-300' : 'text-stone-400 hover:text-stone-600'}`}
+        >
+          Ver Historial y Progreso
+        </button>
+      </div>
+    </div>
+  );
+
+  const renderSection = (currentStep, value, field, timeLimit, icon) => {
+    const promptData = PROMPTS[currentStep][sessionMode];
+    
+    return (
+      <div className="animate-in slide-in-from-right duration-500 fade-in">
+        <div className={`mb-6 flex items-center justify-between ${isDarkMode ? 'text-stone-400' : 'text-stone-500'}`}>
+           <button onClick={() => setStep(AppStep.WELCOME)} className="hover:text-amber-500 transition-colors"><ArrowLeft size={24}/></button>
+           {window.Timer && <window.Timer duration={timeLimit} onTimeUp={() => {}} isPaused={isPaused} />}
+        </div>
+        
+        <div className="mb-8">
+          <div className="flex items-center gap-3 mb-4">
+             <div className={`p-2 rounded-lg ${isDarkMode ? 'bg-stone-800 text-amber-400' : 'bg-white text-amber-600 shadow-sm'}`}>
+               {icon}
+             </div>
+             <h2 className={`text-2xl font-serif font-bold ${isDarkMode ? 'text-stone-200' : 'text-stone-800'}`}>{promptData.title}</h2>
+          </div>
+          <p className={`text-lg leading-relaxed mb-4 ${isDarkMode ? 'text-stone-300' : 'text-stone-700'}`}>
+            {promptData.prompt}
+          </p>
+          <div className={`p-4 rounded-xl text-sm flex gap-3 ${isDarkMode ? 'bg-stone-900/50 border border-stone-800 text-stone-400' : 'bg-amber-50 border border-amber-100 text-amber-800'}`}>
+            <Lightbulb size={18} className="shrink-0 mt-0.5" />
+            <p className="italic">"{promptData.tip}"</p>
+          </div>
+        </div>
+
+        <textarea
+          value={value}
+          onChange={(e) => setData({ ...data, [field]: e.target.value })}
+          placeholder="Escribe aquí tus recuerdos con el mayor detalle sensorial posible..."
+          className={`w-full h-48 p-5 rounded-2xl text-lg resize-none shadow-inner border-2 transition-all focus:outline-none focus:ring-4 ${
+            isDarkMode 
+              ? 'bg-stone-900 border-stone-800 text-stone-200 focus:border-amber-700/50 focus:ring-amber-900/20 placeholder-stone-700' 
+              : 'bg-white border-stone-200 text-stone-800 focus:border-amber-400 focus:ring-amber-100 placeholder-stone-400'
+          }`}
+        />
+
+        <button
+          onClick={handleNext}
+          disabled={!value.trim()}
+          className={`w-full mt-6 py-4 rounded-xl font-bold text-lg shadow-lg transition-all transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 ${
+            isDarkMode 
+              ? 'bg-amber-700 hover:bg-amber-600 text-white disabled:hover:bg-amber-700' 
+              : 'bg-stone-800 hover:bg-stone-700 text-white'
+          }`}
+        >
+          <span>Siguiente</span>
+          <ChevronRight size={20} />
+        </button>
+      </div>
+    );
+  };
+
+  const renderMemoryEncoding = () => (
+    <div className="text-center animate-in zoom-in duration-500">
+      <div className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-bold mb-8 uppercase tracking-wider ${isDarkMode ? 'bg-stone-800 text-amber-400' : 'bg-stone-200 text-stone-600'}`}>
+        <Eye size={16} /> Fase de Codificación
+      </div>
+      <h2 className={`text-3xl font-serif font-bold mb-6 ${isDarkMode ? 'text-stone-200' : 'text-stone-800'}`}>Memoriza estos objetos</h2>
+      <p className={`mb-8 max-w-md mx-auto ${isDarkMode ? 'text-stone-400' : 'text-stone-600'}`}>
+        Tienes unos segundos. Crea una historia mental ridícula que conecte estos 5 elementos para recordarlos mejor.
+      </p>
+      
+      <div className="grid grid-cols-5 gap-2 sm:gap-4 mb-10">
+        {targetItems.map((item, idx) => (
+          <div key={idx} className={`aspect-square flex flex-col items-center justify-center rounded-2xl shadow-xl border-b-4 animate-in slide-in-from-bottom fade-in duration-700 ${
+            isDarkMode ? 'bg-stone-800 border-stone-950 text-white' : 'bg-white border-stone-200 text-stone-800'
+          }`} style={{ animationDelay: `${idx * 100}ms` }}>
+            <span className="text-4xl sm:text-5xl mb-2 filter drop-shadow-sm">{item.emoji}</span>
+          </div>
+        ))}
+      </div>
+
+      <button
+        onClick={handleNext}
+        className={`w-full py-4 rounded-xl font-bold text-lg shadow-lg transition-all transform hover:scale-105 ${
+            isDarkMode ? 'bg-amber-600 hover:bg-amber-500 text-white' : 'bg-stone-900 hover:bg-stone-800 text-white'
+        }`}
+      >
+        ¡Listo, ocultar!
+      </button>
+    </div>
+  );
+
+  const renderMemoryRetrieval = () => (
+    <div className="animate-in fade-in duration-500">
+      <h2 className={`text-3xl font-serif font-bold mb-6 text-center ${isDarkMode ? 'text-stone-200' : 'text-stone-800'}`}>Recuperación Activa</h2>
+      <p className={`text-center mb-8 ${isDarkMode ? 'text-stone-400' : 'text-stone-600'}`}>
+        Selecciona los 5 objetos que memorizaste al inicio.
+        <br/><span className="text-sm opacity-70">(Seleccionados: {selectedItems.length}/5)</span>
+      </p>
+      
+      <div className="grid grid-cols-3 sm:grid-cols-5 gap-3 sm:gap-4 mb-8">
+        {MEMORY_ITEMS_POOL.map(item => {
+          const isSelected = selectedItems.includes(item.id);
+          return (
+            <button
+              key={item.id}
+              onClick={() => toggleSelection(item.id)}
+              className={`aspect-square flex flex-col items-center justify-center rounded-xl transition-all duration-200 transform ${
+                isSelected 
+                  ? 'bg-amber-500 text-white scale-95 shadow-inner ring-4 ring-amber-500/30' 
+                  : (isDarkMode ? 'bg-stone-800 text-stone-400 hover:bg-stone-700 hover:scale-105' : 'bg-white text-stone-600 hover:bg-stone-50 hover:scale-105 shadow-sm border border-stone-200')
+              }`}
+            >
+              <span className="text-3xl sm:text-4xl">{item.emoji}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      <button
+        onClick={handleSubmit}
+        disabled={selectedItems.length !== 5}
+        className={`w-full py-4 rounded-xl font-bold text-lg shadow-lg transition-all ${
+          selectedItems.length === 5
+            ? (isDarkMode ? 'bg-green-600 hover:bg-green-500 text-white transform hover:scale-105' : 'bg-stone-900 hover:bg-stone-800 text-white transform hover:scale-105')
+            : (isDarkMode ? 'bg-stone-800 text-stone-600 cursor-not-allowed' : 'bg-stone-200 text-stone-400 cursor-not-allowed')
+        }`}
+      >
+        {isLoading ? 'Analizando...' : 'Finalizar Entrenamiento'}
+      </button>
+    </div>
+  );
+
+  const renderAnalysis = () => (
+    <div className="flex flex-col items-center justify-center h-[60vh] text-center animate-in fade-in duration-700">
+      <div className="relative mb-8">
+        <div className="w-24 h-24 border-4 border-stone-200 border-t-amber-500 rounded-full animate-spin"></div>
+        <Brain className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-stone-400" size={32} />
+      </div>
+      <h2 className={`text-2xl font-bold mb-2 ${isDarkMode ? 'text-stone-200' : 'text-stone-800'}`}>Analizando Patrones</h2>
+      <p className={isDarkMode ? 'text-stone-500' : 'text-stone-500'}>La IA está evaluando tu densidad de memoria...</p>
+    </div>
+  );
+
+  const renderCompleted = () => (
+    <div className="animate-in slide-in-from-bottom duration-700 fade-in">
+        <div className={`text-center p-8 rounded-3xl mb-8 border-b-4 ${isDarkMode ? 'bg-stone-800 border-stone-950' : 'bg-white border-stone-200 shadow-xl'}`}>
+        <div className="inline-block p-4 bg-green-100 rounded-full text-green-700 mb-4 shadow-sm">
+            <Award size={48} />
+        </div>
+        <h2 className={`text-3xl font-serif font-bold mb-2 ${isDarkMode ? 'text-stone-200' : 'text-stone-800'}`}>¡Entrenamiento Completado!</h2>
+        <div className="flex justify-center items-center gap-2 mb-6">
+            <span className={`text-5xl font-black ${data.memoryScore === 5 ? 'text-amber-500' : (isDarkMode ? 'text-stone-200' : 'text-stone-800')}`}>{data.memoryScore}</span>
+            <span className={`text-xl font-medium mt-4 ${isDarkMode ? 'text-stone-500' : 'text-stone-400'}`}>/ 5</span>
+        </div>
+        
+        <div className={`p-4 rounded-xl text-left border ${isDarkMode ? 'bg-stone-900/50 border-stone-700' : 'bg-stone-50 border-stone-100'}`}>
+            <h3 className={`font-bold mb-2 flex items-center gap-2 ${isDarkMode ? 'text-stone-300' : 'text-stone-700'}`}>
+            <Sparkles size={16} className="text-amber-500"/> Análisis de Gemini AI
+            </h3>
+            <div className={`text-sm leading-relaxed ${isDarkMode ? 'text-stone-400' : 'text-stone-600'}`}>
+               <InteractiveFeedback text={feedback} isDarkMode={isDarkMode} />
+            </div>
+        </div>
+        </div>
+
+        <button
+        onClick={() => setStep(AppStep.WELCOME)}
+        className={`w-full py-4 rounded-xl font-bold text-lg shadow-lg transition-all transform hover:scale-105 ${
+            isDarkMode ? 'bg-stone-700 hover:bg-stone-600 text-white' : 'bg-stone-900 hover:bg-stone-800 text-white'
+        }`}
+        >
+        Volver al Inicio
+        </button>
+    </div>
+  );
+  
+  const renderHistory = () => {
+    // Filtrar historial para mostrar solo la fecha seleccionada si existe
+    const filteredHistory = selectedHistoryDate 
+      ? history.filter(h => new Date(h.timestamp).toDateString() === selectedHistoryDate)
+      : history; // Si no hay fecha, podrías mostrar todo o nada, aquí mostramos todo como fallback o lo dejamos vacío abajo.
+
+    return (
+    <div className="animate-in fade-in slide-in-from-left duration-500">
+      <div className="flex items-center gap-4 mb-6">
+        <button onClick={() => setStep(AppStep.WELCOME)} className={`p-2 rounded-full transition-colors ${isDarkMode ? 'hover:bg-stone-800 text-stone-400' : 'hover:bg-stone-200 text-stone-600'}`}>
+          <ArrowLeft size={24} />
+        </button>
+        <h2 className={`text-2xl font-serif font-bold ${isDarkMode ? 'text-stone-200' : 'text-stone-800'}`}>Tu Progreso</h2>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <div className={`p-6 rounded-2xl border ${isDarkMode ? 'bg-stone-900 border-stone-800' : 'bg-white border-stone-200 shadow-sm'}`}>
+          <div className={`text-sm font-bold uppercase tracking-wider mb-1 ${isDarkMode ? 'text-stone-500' : 'text-stone-400'}`}>Nivel Actual</div>
+          <div className={`text-xl font-bold ${isDarkMode ? 'text-amber-400' : 'text-amber-600'}`}>{calculateLevel()}</div>
+          <div className={`text-sm mt-2 ${isDarkMode ? 'text-stone-400' : 'text-stone-500'}`}>{history.length} sesiones completadas</div>
+        </div>
+        
+        <div className={`p-6 rounded-2xl border flex flex-col justify-center items-center gap-3 ${isDarkMode ? 'bg-stone-900 border-stone-800' : 'bg-white border-stone-200 shadow-sm'}`}>
+            <button onClick={handleDriveSync} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-colors w-full justify-center ${isDarkMode ? 'bg-stone-800 hover:bg-stone-700 text-stone-300' : 'bg-stone-100 hover:bg-stone-200 text-stone-700'}`}>
+                {isSyncing ? <RefreshCw className="animate-spin" size={16}/> : <Cloud size={16}/>} 
+                {isSyncing ? 'Sincronizando...' : 'Sincronizar con Google Drive'}
+            </button>
+             <div className="flex gap-2 w-full">
+                <button onClick={exportData} className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-bold border ${isDarkMode ? 'border-stone-700 text-stone-400 hover:text-stone-200' : 'border-stone-200 text-stone-500 hover:text-stone-700'}`}>
+                    <Download size={14}/> Backup
+                </button>
+                <button onClick={triggerImport} className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-bold border ${isDarkMode ? 'border-stone-700 text-stone-400 hover:text-stone-200' : 'border-stone-200 text-stone-500 hover:text-stone-700'}`}>
+                    <Upload size={14}/> Importar
+                </button>
+                <input type="file" ref={fileInputRef} onChange={importData} className="hidden" accept=".json" />
+            </div>
+        </div>
+      </div>
+
+      <CalendarWidget 
+        history={history} 
+        onSelectDate={setSelectedHistoryDate} 
+        selectedDate={selectedHistoryDate}
+        isDarkMode={isDarkMode}
+      />
+
+      <div className="space-y-4">
+        <h3 className={`font-bold ml-1 ${isDarkMode ? 'text-stone-400' : 'text-stone-700'}`}>
+          {selectedHistoryDate ? `Registros del ${new Date(selectedHistoryDate).toLocaleDateString()}` : 'Selecciona un día en el calendario'}
+        </h3>
+        
+        {selectedHistoryDate && filteredHistory.length === 0 && (
+            <div className={`text-center py-8 rounded-xl border border-dashed ${isDarkMode ? 'border-stone-800 text-stone-600' : 'border-stone-300 text-stone-400'}`}>
+                No hay registros para este día.
+            </div>
+        )}
+
+        {filteredHistory.map((session) => (
+          <div key={session.id} className={`p-5 rounded-2xl border transition-all ${isDarkMode ? 'bg-stone-900 border-stone-800 hover:border-stone-700' : 'bg-white border-stone-200 shadow-sm hover:shadow-md'}`}>
+            <div className="flex justify-between items-start mb-3">
+              <div>
+                <span className={`inline-block px-2 py-0.5 rounded text-xs font-bold mb-1 ${session.sessionType === 'MORNING' ? 'bg-amber-100 text-amber-800' : (isDarkMode ? 'bg-indigo-900/50 text-indigo-300' : 'bg-indigo-100 text-indigo-800')}`}>
+                  {session.sessionType === 'MORNING' ? 'Matutina' : 'Nocturna'}
+                </span>
+                <div className={`text-xs ${isDarkMode ? 'text-stone-500' : 'text-stone-400'}`}>
+                  {new Date(session.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </div>
+              </div>
+              <div className="flex items-center gap-1">
+                 {session.synced ? <Cloud size={14} className="text-green-500" title="Sincronizado"/> : <CloudOff size={14} className="text-orange-400" title="Pendiente"/>}
+                 <div className={`font-bold text-lg px-2 ${session.memoryScore === 5 ? 'text-amber-500' : (isDarkMode ? 'text-stone-400' : 'text-stone-600')}`}>
+                    {session.memoryScore}/5
+                 </div>
+              </div>
+            </div>
+            
+            {/* Acordeón simple para detalles */}
+            <details className="group">
+                <summary className={`cursor-pointer list-none text-sm font-medium flex items-center gap-2 ${isDarkMode ? 'text-stone-400 hover:text-stone-300' : 'text-stone-500 hover:text-stone-700'}`}>
+                    <ChevronRight size={16} className="transition-transform group-open:rotate-90"/> Ver detalles
+                </summary>
+                <div className={`mt-4 pt-4 border-t space-y-4 text-sm ${isDarkMode ? 'border-stone-800 text-stone-300' : 'border-stone-100 text-stone-600'}`}>
+                    {session.anecdote && (
+                        <div>
+                            <strong className="block text-xs uppercase opacity-50 mb-1">Anécdota</strong>
+                            <p>{session.anecdote}</p>
+                        </div>
+                    )}
+                    {session.feedback && (
+                        <div className={`p-3 rounded-lg ${isDarkMode ? 'bg-stone-950' : 'bg-stone-50'}`}>
+                             <strong className="block text-xs uppercase opacity-50 mb-1 flex items-center gap-1"><Brain size={12}/> Feedback AI</strong>
+                             <InteractiveFeedback text={session.feedback} isDarkMode={isDarkMode} />
+                        </div>
+                    )}
+                </div>
+            </details>
+          </div>
+        ))}
+      </div>
+    </div>
+  )};
+
+  // --- FIN DEL CÓDIGO A PEGAR ---
+
+
   return (
     <div className={`min-h-screen py-8 px-4 sm:px-6 lg:px-8 transition-colors duration-500 relative ${isDarkMode ? 'bg-stone-950' : 'bg-[#E7E5E4]'}`}>
       <button 

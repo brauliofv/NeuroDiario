@@ -9,7 +9,7 @@ const ASSETS_TO_CACHE = [
   './services/geminiService.js',
   './services/googleDriveService.js',
   './components/Timer.js',
-  'https://cdn.tailwindcss.com',
+  //'https://cdn.tailwindcss.com', Se eliminará
   'https://fonts.googleapis.com/css2?family=Merriweather:wght@300;400;700&family=Inter:wght@300;400;500;600&display=swap',
   'https://cdn-icons-png.flaticon.com/512/2823/2823616.png',
   'https://unpkg.com/@babel/standalone/babel.min.js'
